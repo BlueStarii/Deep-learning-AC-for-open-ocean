@@ -59,7 +59,7 @@ for file in files:
         train_label = hq_dataset[:,:8]
 
         train_dataset = train_data
-        train_dataset[:,-3:] = np.cos(train_data[:,-3:])
+        train_dataset[:,-3:] = np.cos(np.radians(train_data[:,-3:]))
         
         file_name = "train_data.h5"
         f = h5.File(file_name, "w")
