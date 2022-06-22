@@ -20,17 +20,6 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import r2_score
 from tools import plot_scatter
 import timeit
-# from tools import EarlyStopping
-# 
-def quantile_loss(preds, target, quantiles=[1,1,1,1,1,1,1,1]):
-    assert not target.requires_grad
-    assert preds.size(0) == target.size(0)
-    losses = []
-    for i, q in enumerate(quantiles):
-        errors = target - preds[:, i]
-        losses.append(torch.max((q - 1) * errors, q * errors).unsqueeze(1))
-    loss = torch.mean(torch.sum(torch.cat(losses, dim=1), dim=1))
-    return loss
 
 class myDataset(Dataset):
 
@@ -40,11 +29,7 @@ class myDataset(Dataset):
         file_ = h5py.File(h5_path)
         self.x_data = file_['train'][...]
         self.y_data = file_['label'][...]
-
-    
     def __getitem__(self, index):
-
-        # 这个地方可以做想做的预处理~
         x = self.x_data[index]
         y = self.y_data[index]
         x_mean = np.array([0.04393683,  0.03867437,  0.0325633 ,  0.02249004,  0.02027589,\
@@ -66,15 +51,11 @@ class myDataset(Dataset):
 
         return self.x_data.shape[0]
 def getLoss(index=0):
-    '''
-    这个我是参考的这里：https://www.jiqizhixin.com/articles/2018-06-21-3
-    '''
-
     loss_list = [
         nn.MSELoss(),
         nn.SmoothL1Loss(),
         torch.cosh,
-        quantile_loss # 这个没测试~
+        quantile_loss 
     ]
     if index > 4:
         return loss_list[0]
@@ -100,15 +81,6 @@ def evaluate(model,val_loader,device='cuda'):
             i += 1
     total_label = np.delete(total_label,0,0)
     total_predict = np.delete(total_predict,0,0)
-    #反标准化
-    # minmax 归一化
-    # x_min = np.array([0.000050,0.003899,0.006055,0.004266,0.003491,0.003299,0.001014,0.001039,-1,-1,-1],'float32')
-    # x_max = np.array([0.252976,0.207742,0.161734,0.134892,0.132385,0.133128,0.109215,0.110088,1,1,1],'float32')
-    # y_min = np.array([0.000098,0.000180,0.000418,0.000712,0.000802,0.000404,0.000004,0.000008],'float32')
-    # y_max = np.array([0.060074,0.041702,0.039102,0.022248,0.018130,0.015778,0.000998,0.001660],'float32')
-    # total_label = (y_max*0.5-y_min)*total_label+y_min
-    # total_predict = (y_max*0.5-y_min)*total_predict+y_min
-    # 标准化
     y_mean = np.array([0.00779992, 0.00640577, 0.00509876, 0.00246815, 0.00192338,\
                            0.00165096, 0.00020034, 0.00022317],'float32')
     y_std = np.array([4.39608054e-03, 3.01673863e-03, 1.52137749e-03, 5.82994590e-04,\
@@ -123,7 +95,7 @@ if __name__ == "__main__":
     starttime = timeit.default_timer()
     path = r'testset_CHL.h5'
     ds = myDataset(path)
-    rate = 1 # 训练数据占总数据多少~
+    rate = 1
     batch_size = 10000
     data_len = len(ds)
     indices = torch.randperm(data_len).tolist()
@@ -132,8 +104,6 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_ds, shuffle=False, batch_size=batch_size,
                                        num_workers=0, drop_last=False, pin_memory=True)
 
-    # model = tnet()
-    # model = Net(11,8)
     model = torch.load('best_model_thisstudy.pt')	
     label, predict = evaluate(model, val_loader)
     stats = np.empty((8,6))
